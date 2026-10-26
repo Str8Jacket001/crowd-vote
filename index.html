@@ -108,14 +108,16 @@ var id=store("cp_id");if(!id){id="v"+Math.random().toString(36).slice(2,10)+Date
 function esc(s){return String(s).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]})}
 function url(p){return DB+"/rooms/"+ROOM+(p?"/"+p:"")+".json"}
 if(!DB||!ROOM){m.innerHTML="<div class='big'>Scan the QR code again.</div><div class='sub'>This page needs the room code from the screen at the front.</div>";return}
-var last="",localOpen={},myVote={};
+var last="",myVote={};
 function put(p,v){return fetch(url(p),{method:"PUT",body:JSON.stringify(v)})}
 function post(p,v){return fetch(url(p),{method:"POST",body:JSON.stringify(v)})}
 function beat(){put("seen/"+id,{".sv":"timestamp"}).catch(function(){})}
 var ICONS=["🧙","🐉","👸","🦇","📱","🥷","🤖","🦄","🧑‍🚀","🦁"];
 var OPEN_SLIDES={
-  "Ask the kids":{path:"questions",placeholder:"Type your question",btn:"Submit question (+5)"},
-  "Newborn options":{path:"ideas",placeholder:"Type your idea",btn:"Submit idea"}
+  "Ask the kids":{mode:"list",path:"questions",placeholder:"Type your question",btn:"Submit question (+5)"},
+  "Newborn options":{mode:"list",path:"ideas",placeholder:"Type your idea",btn:"Submit idea"},
+  "BPSS-S gaps":{mode:"cloud",path:"spiritWords",placeholder:"One word or short phrase",btn:"Submit"},
+  "Interview order":{mode:"rank",path:"interviewVotes",items:[["allen","Mr. A, 48"],["k1","17-year-old"],["k2","14-year-old"],["k3","11-year-old"],["k4","8-year-old"]]}
 };
 function renderLeaderboard(room){
   var strip=document.getElementById("lbstrip");if(!strip)return;
@@ -141,7 +143,30 @@ function render(room){
   if(!st.id||st.status==="idle"){
     if(sig===last)return;last=sig;
     var sl=room.slide,oc=sl&&OPEN_SLIDES[sl.t];
-    if(oc&&sl.html){
+    if(oc&&sl.html&&oc.mode==="rank"){
+      var safeHtmlR=sl.html.replace(/\s+contenteditable(="[^"]*")?/gi,"");
+      var picked=((room[oc.path]&&room[oc.path][id])||[]).slice();
+      m.innerHTML="<div class='mirror'>"+safeHtmlR+"<div class='qform'><div class='sub' style='color:#fff;margin-top:0'>Tap in the order you'd interview them, 1st to last.</div><div id='rankBtns' style='display:grid;gap:8px;margin-top:10px'></div><button id='qBtn' style='margin-top:10px'>Submit order</button><button id='qClear' class='opt' style='margin-top:6px'>Clear</button></div></div>";
+      var wrap=document.getElementById("rankBtns");
+      function renderRankBtns(){
+        wrap.innerHTML="";
+        oc.items.forEach(function(it){
+          var idx=picked.indexOf(it[0]);
+          var b=document.createElement("button");b.className="opt"+(idx>=0?" mine":"");
+          b.innerHTML="<span class='l'>"+(idx>=0?(idx+1):"-")+"</span><span class='t'>"+esc(it[1])+"</span>";
+          b.onclick=function(){var i=picked.indexOf(it[0]);if(i>=0)picked.splice(i,1);else if(picked.length<oc.items.length)picked.push(it[0]);renderRankBtns()};
+          wrap.appendChild(b)});}
+      renderRankBtns();
+      document.getElementById("qClear").onclick=function(){picked=[];renderRankBtns()};
+      document.getElementById("qBtn").onclick=function(){if(picked.length!==oc.items.length)return;put(oc.path+"/"+id,picked).catch(function(){});last=""};
+    }else if(oc&&sl.html&&oc.mode==="cloud"){
+      var safeHtmlC=sl.html.replace(/\s+contenteditable(="[^"]*")?/gi,"");
+      var already=(room[oc.path]&&room[oc.path][id])||"";
+      m.innerHTML="<div class='mirror'>"+safeHtmlC+"<div class='qform'><input id='qInput' maxlength='40' placeholder='"+esc(oc.placeholder)+"' value=\""+esc(already)+"\"><button id='qBtn'>"+esc(already?"Update":oc.btn)+"</button></div></div>";
+      var qiC=document.getElementById("qInput"),qbC=document.getElementById("qBtn");
+      qbC.onclick=function(){var v=(qiC.value||"").trim().slice(0,40);if(!v)return;put(oc.path+"/"+id,v).catch(function(){});last=""};
+      qiC.addEventListener("keydown",function(e){if(e.key==="Enter")qbC.click()});
+    }else if(oc&&sl.html){
       var safeHtml0=sl.html.replace(/\s+contenteditable(="[^"]*")?/gi,"");
       var mySub=(room[oc.path]&&Object.keys(room[oc.path]).map(function(k){return room[oc.path][k]}).filter(function(x){return x&&x.id===id}))||[];
       var h="<div class='mirror'>"+safeHtml0+"<div class='qform'><input id='qInput' maxlength='140' placeholder='"+esc(oc.placeholder)+"'><button id='qBtn'>"+esc(oc.btn)+"</button></div><div class='qlist'>"+mySub.map(function(x){return "<div class='qc'>You said: "+esc(x.text)+"</div>"}).join("")+"</div></div>";
@@ -158,26 +183,41 @@ function render(room){
     }
     return;
   }
-  if(st.status==="open"&&!localOpen[st.t])localOpen[st.t]=Date.now();
-  if(sig===last){var tm=document.getElementById("tm");if(tm&&st.status==="open"){var l=Math.max(0,(st.secs||45)-Math.round((Date.now()-localOpen[st.t])/1000));tm.textContent=l+"s"}return}
+  if(sig===last)return;
   last=sig;
-  var h2="<div><span class='pill'>"+(st.status==="open"?"Voting open":"Voting closed")+"</span>"+(st.status==="open"?"<span class='timer' id='tm'></span>":"")+"</div><h1>"+esc(st.title||"")+"</h1>";
+  var statusLabel=st.status==="open"?"Voting open":st.status==="paused"?"Voting paused":"Voting closed";
+  var h2="<div><span class='pill'>"+statusLabel+"</span></div><h1>"+esc(st.title||"")+"</h1>";
   var tot=0,mx=0;(st.counts||[]).forEach(function(c){tot+=c;if(c>mx)mx=c});
   (st.options||[]).forEach(function(o,i){
     var mine=myVote[st.id]===i;
     if(st.status==="open")h2+="<button class='opt"+(mine?" mine":"")+"' data-i='"+i+"'><span class='l'>"+L[i]+"</span><span class='t'>"+esc(o)+"</span></button>";
+    else if(st.status==="paused")h2+="<div class='opt"+(mine?" mine":"")+"'><span class='l'>"+L[i]+"</span><span class='t'>"+esc(o)+"</span></div>";
     else{var c=st.counts?st.counts[i]:0,p=tot?Math.round(c/tot*100):0;h2+="<div class='opt"+(c===mx&&mx>0?" win":"")+(mine?" mine":"")+"'><span class='l'>"+L[i]+"</span><span class='t'>"+esc(o)+"<div class='bar'><i style='width:"+p+"%'></i></div></span><b>"+p+"%</b></div>"}
   });
   var mv=myVote[st.id],msg;
-  if(st.status==="open")msg=(mv==null)?"Tap an answer. You can change it until time is up.":"Vote saved. Tap another answer to change it.";
+  if(st.status==="open")msg=(mv==null)?"Tap an answer. You can change it any time while voting is open.":"Vote saved. Tap another answer to change it.";
+  else if(st.status==="paused")msg="Voting is paused. Hang tight.";
   else msg=((mv==null)?"You didn't vote this round.":"You voted "+L[mv]+".")+" Look up at the screen.";
   h2+="<div class='sub'>"+msg+"</div>";
   m.innerHTML=h2;
   [].forEach.call(m.querySelectorAll("button.opt"),function(b){b.onclick=function(){var i=+b.getAttribute("data-i");myVote[st.id]=i;put("votes/"+st.id+"/"+id,i).catch(function(){});last="";render(room)}});
 }
 function poll(){fetch(url("")).then(function(r){return r.json()}).then(function(room){cnt.textContent="";render(room||{})}).catch(function(){cnt.textContent="reconnecting"})}
+var liveES=null,esRoom={};
+function applyStreamPath(path,data){
+  if(!path||path==="/"){esRoom=data||{};return}
+  var parts=path.split("/").filter(Boolean),obj=esRoom;
+  for(var i=0;i<parts.length-1;i++){if(obj[parts[i]]==null||typeof obj[parts[i]]!=="object")obj[parts[i]]={};obj=obj[parts[i]]}
+  var last2=parts[parts.length-1];
+  if(data===null){if(obj)delete obj[last2]}else obj[last2]=data}
+function startStream(){
+  if(!DB||typeof EventSource==="undefined")return;
+  try{liveES=new EventSource(url(""))}catch(e){liveES=null;return}
+  liveES.addEventListener("put",function(e){try{var d=JSON.parse(e.data);applyStreamPath(d.path,d.data);cnt.textContent="";render(esRoom)}catch(err){}});
+  liveES.addEventListener("patch",function(e){try{var d=JSON.parse(e.data);var parts=(d.path||"/").split("/").filter(Boolean),obj=esRoom;for(var i=0;i<parts.length;i++){if(obj[parts[i]]==null||typeof obj[parts[i]]!=="object")obj[parts[i]]={};obj=obj[parts[i]]}Object.keys(d.data||{}).forEach(function(k){obj[k]=d.data[k]});cnt.textContent="";render(esRoom)}catch(err){}});
+  liveES.onerror=function(){if(liveES){liveES.close();liveES=null}setTimeout(startStream,1500)}}
 var name=store("cp_name"),mood=store("cp_mood"),icon=store("cp_icon");
-function startApp(){var po=document.getElementById("postOnboard");if(po)po.style.display="";poll();beat();setInterval(poll,1200);setInterval(beat,5000)}
+function startApp(){var po=document.getElementById("postOnboard");if(po)po.style.display="";poll();startStream();beat();setInterval(poll,5000);setInterval(beat,5000)}
 function askIcon(){
   m.innerHTML="<div class='big'>Pick your icon</div><div class='sub'>This shows on the leaderboard.</div><div class='iconrow' id='iconRow'></div>";
   var row=document.getElementById("iconRow");
