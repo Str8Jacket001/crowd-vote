@@ -22,6 +22,9 @@ h1{font:700 26px/1.15 Cambria,Georgia,serif;margin:6px 0;overflow-wrap:anywhere}
 .win{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber)}
 .pill{display:inline-block;background:var(--amber);color:#2b2370;font-weight:700;border-radius:99px;padding:4px 12px;font-size:14px}
 .timer{font:700 20px Arial;color:var(--amber);margin-left:8px}
+.namewrap input{width:100%;box-sizing:border-box;font:inherit;font-size:20px;padding:14px 16px;border-radius:16px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.12);color:#fff;margin-top:14px}
+.namewrap input::placeholder{color:#cfcaff}
+.namewrap button{margin-top:12px;width:100%;border:0;border-radius:16px;padding:14px;font:inherit;font-weight:700;font-size:18px;background:var(--amber);color:#2b2370}
 </style>
 </head>
 <body>
@@ -44,7 +47,7 @@ function beat(){put("seen/"+id,{".sv":"timestamp"}).catch(function(){})}
 function render(st){
   st=st||{status:"idle"};
   var sig=JSON.stringify([st.status,st.id,st.t,myVote[st.id],st.counts]);
-  if(!st.id||st.status==="idle"){var h="<div class='big'>You're in.</div><div class='sub'>Waiting for the next question. Keep this page open.</div>";if(m.innerHTML!==h)m.innerHTML=h;last="";return}
+  if(!st.id||st.status==="idle"){var h="<div class='big'>You're in, "+esc(name||"")+".</div><div class='sub'>Waiting for the next question. Keep this page open.</div>";if(m.innerHTML!==h)m.innerHTML=h;last="";return}
   if(st.status==="open"&&!localOpen[st.t])localOpen[st.t]=Date.now();
   if(sig===last){var tm=document.getElementById("tm");if(tm&&st.status==="open"){var l=Math.max(0,(st.secs||45)-Math.round((Date.now()-localOpen[st.t])/1000));tm.textContent=l+"s"}return}
   last=sig;
@@ -63,7 +66,17 @@ function render(st){
   [].forEach.call(m.querySelectorAll("button.opt"),function(b){b.onclick=function(){var i=+b.getAttribute("data-i");myVote[st.id]=i;put("votes/"+st.id+"/"+id,i).catch(function(){});last="";render(st)}});
 }
 function poll(){fetch(url("state")).then(function(r){return r.json()}).then(function(st){cnt.textContent="";render(st)}).catch(function(){cnt.textContent="reconnecting"})}
-poll();beat();setInterval(poll,1200);setInterval(beat,5000);
+var name=store("cp_name");
+function startApp(){poll();beat();setInterval(poll,1200);setInterval(beat,5000)}
+if(name){put("names/"+id,name).catch(function(){});startApp()}
+else{
+  m.innerHTML="<div class='big'>What's your name?</div><div class='sub'>Your presenter will see it next to your answers.</div><div class='namewrap'><input id='nameInput' maxlength='40' placeholder='First name'><button id='nameBtn'>Join</button></div>";
+  var inp=document.getElementById("nameInput"),btn=document.getElementById("nameBtn");
+  function submitName(){var v=(inp.value||"").trim().slice(0,40);if(!v)return;name=v;store("cp_name",v);put("names/"+id,v).catch(function(){});startApp()}
+  btn.onclick=submitName;
+  inp.addEventListener("keydown",function(e){if(e.key==="Enter")submitName()});
+  setTimeout(function(){inp.focus()},50);
+}
 })();
 </script>
 </body>
