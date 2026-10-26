@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crowd Party | Vote</title>
+<style>
+:root{--amber:#fcd34d;--ink:#232342}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Arial,Helvetica,sans-serif;color:#fff;background:linear-gradient(160deg,#2b2370,#3730a3 60%,#4338ca);display:flex;flex-direction:column}
+header{padding:18px 18px 6px;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);display:flex;justify-content:space-between}
+main{flex:1;padding:8px 18px 28px;display:flex;flex-direction:column;gap:14px}
+h1{font:700 26px/1.15 Cambria,Georgia,serif;margin:6px 0;overflow-wrap:anywhere}
+.big{font:700 34px/1.1 Cambria,Georgia,serif}
+.sub{color:#dcd8ff;font-size:16px;line-height:1.4}
+.opt{display:flex;gap:14px;align-items:center;width:100%;text-align:left;border:2px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12);color:#fff;border-radius:20px;padding:16px;font-size:18px;line-height:1.25;font-family:inherit}
+.opt .l{flex:none;width:44px;height:44px;border-radius:50%;background:var(--amber);color:#2b2370;font:700 24px Cambria,serif;display:grid;place-items:center}
+.opt .t{flex:1;overflow-wrap:anywhere}
+.opt.mine{background:#fff;color:var(--ink);border-color:#fff}
+.bar{height:10px;border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--amber)}
+.win{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber)}
+.pill{display:inline-block;background:var(--amber);color:#2b2370;font-weight:700;border-radius:99px;padding:4px 12px;font-size:14px}
+.timer{font:700 20px Arial;color:var(--amber);margin-left:8px}
+</style>
+</head>
+<body>
+<header><span>Crowd Party</span><span id="count"></span></header>
+<main id="m"><div class="big">Joining...</div><div class="sub">Keep this page open.</div></main>
+<script src="config.js"></script>
+<script>
+(function(){
+var CFG=window.CP_CONFIG||{},DB=String(CFG.databaseURL||"").replace(/\/$/,"");
+var params=new URLSearchParams(location.search),ROOM=(params.get("r")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8);
+var m=document.getElementById("m"),cnt=document.getElementById("count"),L="ABCDEFGH";
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+var id=store("cp_id");if(!id){id="v"+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store("cp_id",id)}
+function esc(s){return String(s).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]})}
+function url(p){return DB+"/rooms/"+ROOM+(p?"/"+p:"")+".json"}
+if(!DB||!ROOM){m.innerHTML="<div class='big'>Scan the QR code again.</div><div class='sub'>This page needs the room code from the screen at the front.</div>";return}
+var last="",localOpen={},myVote={};
+function put(p,v){return fetch(url(p),{method:"PUT",body:JSON.stringify(v)})}
+function beat(){put("seen/"+id,{".sv":"timestamp"}).catch(function(){})}
+function render(st){
+  st=st||{status:"idle"};
+  var sig=JSON.stringify([st.status,st.id,st.t,myVote[st.id],st.counts]);
+  if(!st.id||st.status==="idle"){var h="<div class='big'>You're in.</div><div class='sub'>Waiting for the next question. Keep this page open.</div>";if(m.innerHTML!==h)m.innerHTML=h;last="";return}
+  if(st.status==="open"&&!localOpen[st.t])localOpen[st.t]=Date.now();
+  if(sig===last){var tm=document.getElementById("tm");if(tm&&st.status==="open"){var l=Math.max(0,(st.secs||45)-Math.round((Date.now()-localOpen[st.t])/1000));tm.textContent=l+"s"}return}
+  last=sig;
+  var h2="<div><span class='pill'>"+(st.status==="open"?"Voting open":"Voting closed")+"</span>"+(st.status==="open"?"<span class='timer' id='tm'></span>":"")+"</div><h1>"+esc(st.title||"")+"</h1>";
+  var tot=0,mx=0;(st.counts||[]).forEach(function(c){tot+=c;if(c>mx)mx=c});
+  (st.options||[]).forEach(function(o,i){
+    var mine=myVote[st.id]===i;
+    if(st.status==="open")h2+="<button class='opt"+(mine?" mine":"")+"' data-i='"+i+"'><span class='l'>"+L[i]+"</span><span class='t'>"+esc(o)+"</span></button>";
+    else{var c=st.counts?st.counts[i]:0,p=tot?Math.round(c/tot*100):0;h2+="<div class='opt"+(c===mx&&mx>0?" win":"")+(mine?" mine":"")+"'><span class='l'>"+L[i]+"</span><span class='t'>"+esc(o)+"<div class='bar'><i style='width:"+p+"%'></i></div></span><b>"+p+"%</b></div>"}
+  });
+  var mv=myVote[st.id],msg;
+  if(st.status==="open")msg=(mv==null)?"Tap an answer. You can change it until time is up.":"Vote saved. Tap another answer to change it.";
+  else msg=((mv==null)?"You didn't vote this round.":"You voted "+L[mv]+".")+" Look up at the screen.";
+  h2+="<div class='sub'>"+msg+"</div>";
+  m.innerHTML=h2;
+  [].forEach.call(m.querySelectorAll("button.opt"),function(b){b.onclick=function(){var i=+b.getAttribute("data-i");myVote[st.id]=i;put("votes/"+st.id+"/"+id,i).catch(function(){});last="";render(st)}});
+}
+function poll(){fetch(url("state")).then(function(r){return r.json()}).then(function(st){cnt.textContent="";render(st)}).catch(function(){cnt.textContent="reconnecting"})}
+poll();beat();setInterval(poll,1200);setInterval(beat,5000);
+})();
+</script>
+</body>
+</html>
