@@ -5,11 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Crowd Party | Vote</title>
 <style>
-:root{--amber:#fcd34d;--ink:#232342}
+:root{--amber:#fcd34d;--ink:#232342;--indigo:#6366f1;--indigo-deep:#4338ca;--teal:#14b8a6;--rose:#db2777;--cream:#fffbeb}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;font-family:Arial,Helvetica,sans-serif;color:#fff;background:linear-gradient(160deg,#2b2370,#3730a3 60%,#4338ca);display:flex;flex-direction:column}
-header{padding:18px 18px 6px;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);display:flex;justify-content:space-between}
-main{flex:1;padding:8px 18px 28px;display:flex;flex-direction:column;gap:14px}
+header{padding:14px 14px 4px;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);display:flex;justify-content:space-between;align-items:center}
+.lbstrip{display:flex;gap:8px;overflow-x:auto;padding:8px 14px;-webkit-overflow-scrolling:touch}
+.lbchip{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.25);border-radius:14px;padding:6px 10px;min-width:52px}
+.lbchip.me{border-color:var(--amber);background:rgba(252,211,77,.18)}
+.lbchip .ic{font-size:20px}
+.lbchip .nm{font-size:9px;font-weight:700;white-space:nowrap;max-width:60px;overflow:hidden;text-overflow:ellipsis}
+.lbchip .sc{font-size:11px;font-weight:800;color:var(--amber)}
+main{flex:1;padding:8px 18px 12px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
 h1{font:700 26px/1.15 Cambria,Georgia,serif;margin:6px 0;overflow-wrap:anywhere}
 .big{font:700 34px/1.1 Cambria,Georgia,serif}
 .sub{color:#dcd8ff;font-size:16px;line-height:1.4}
@@ -22,14 +28,74 @@ h1{font:700 26px/1.15 Cambria,Georgia,serif;margin:6px 0;overflow-wrap:anywhere}
 .win{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber)}
 .pill{display:inline-block;background:var(--amber);color:#2b2370;font-weight:700;border-radius:99px;padding:4px 12px;font-size:14px}
 .timer{font:700 20px Arial;color:var(--amber);margin-left:8px}
-.namewrap input{width:100%;box-sizing:border-box;font:inherit;font-size:20px;padding:14px 16px;border-radius:16px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.12);color:#fff;margin-top:14px}
-.namewrap input::placeholder{color:#cfcaff}
-.namewrap button{margin-top:12px;width:100%;border:0;border-radius:16px;padding:14px;font:inherit;font-weight:700;font-size:18px;background:var(--amber);color:#2b2370}
+.namewrap input,.qform input{width:100%;box-sizing:border-box;font:inherit;font-size:20px;padding:14px 16px;border-radius:16px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.12);color:#fff;margin-top:14px}
+.namewrap input::placeholder,.qform input::placeholder{color:#cfcaff}
+.namewrap button,.qform button{margin-top:12px;width:100%;border:0;border-radius:16px;padding:14px;font:inherit;font-weight:700;font-size:18px;background:var(--amber);color:#2b2370}
+.moodrow,.iconrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.moodrow button,.iconrow button{border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.1);color:#fff;border-radius:16px;padding:12px 14px;font-size:26px;flex:none}
+/* mirrored slide content: condensed desktop-deck classes for phone */
+.mirror{display:grid;gap:12px}
+.mirror button{opacity:.55;pointer-events:none}
+.mirror .kicker{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
+.mirror h2{font:700 24px/1.15 Cambria,Georgia,serif;margin:2px 0 6px;color:#fff}
+.mirror .sub{margin:0 0 6px}
+.mirror .cards,.mirror .c2,.mirror .c3{display:grid!important;grid-template-columns:1fr!important;gap:10px}
+.mirror .card{background:rgba(255,255,255,.95);color:var(--ink);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.mirror .card h3{font-size:16px;margin:0;display:flex;align-items:center;gap:6px}
+.mirror .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.mirror .t{background:var(--teal)}.mirror .r{background:var(--rose)}.mirror .a{background:var(--amber)}.mirror .i{background:var(--indigo)}
+.mirror .card p,.mirror .card li{font-size:14px;line-height:1.4;margin:0}
+.mirror .card ul{margin:0;padding-left:1.1em;display:grid;gap:4px}
+.mirror .reveal{display:none;background:var(--cream);color:var(--ink);border-radius:10px;padding:8px 10px;font-size:13px;margin-top:4px}
+.mirror .card.open .reveal{display:block}
+.mirror .hint{font-size:11px;color:#8884a0;margin-top:4px}
+.mirror .edit{border:2px dashed rgba(255,255,255,.4);border-radius:10px;padding:8px 10px;font-size:13px;min-height:30px;color:#cfcaff}
+.mirror .steps{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:6px;margin:6px 0}
+.mirror .step{background:rgba(255,255,255,.95);color:var(--ink);border-radius:10px;padding:8px 4px;text-align:center;font-weight:700;font-size:11px}
+.mirror .step.good{background:#0f766e;color:#fff}
+.mirror .step.sel{outline:3px solid var(--amber)}
+.mirror .step small{display:block;font-size:1.3em;margin-top:3px;font-family:Cambria,serif}
+.mirror .detail{background:var(--cream);color:var(--ink);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.4;min-height:40px}
+.mirror .mapwrap{display:grid!important;grid-template-columns:1fr!important;gap:10px}
+.mirror .svgbox{background:#fff;border-radius:16px;overflow:hidden;min-height:220px}
+.mirror svg{width:100%;height:auto;display:block}
+.mirror .sh{fill:#fff;stroke:#2b2760;stroke-width:3.5}
+.mirror .lbl{font:600 11px Arial;fill:#4a425a;text-anchor:middle}
+.mirror .hid{opacity:0}
+.mirror .side{display:grid;gap:8px;margin-top:8px}
+.mirror .panel{background:rgba(255,255,255,.95);color:var(--ink);border-radius:10px;padding:8px 10px;font-size:13px}
+.mirror .panel.q{background:var(--indigo-deep);color:#fff;font-weight:700;font-family:Cambria,serif;font-size:15px}
+.mirror .panel.info{background:var(--cream)}
+.mirror .leg span{display:block;margin:2px 0;font-size:11px}
+.mirror .risk{display:grid!important;grid-template-columns:1fr!important;gap:10px;margin-top:10px}
+.mirror .risk .card{background:rgba(255,255,255,.14);color:#fff}
+.mirror .risk .card.hot{background:#c2410c}
+.mirror .goal{display:grid!important;grid-template-columns:30px 1fr!important;gap:8px;align-items:center;margin:6px 0;background:rgba(255,255,255,.95);color:var(--ink);border-radius:10px;padding:8px 10px}
+.mirror .goal .n{width:26px;height:26px;border-radius:50%;background:#0f766e;color:#fff;font-weight:700;display:grid;place-items:center;font-size:13px}
+.mirror .goal .n.hot{background:#c2410c}
+.mirror .goal b{display:block;font-family:Cambria,serif;font-size:14px}
+.mirror .goal span{font-size:12px}
+.mirror .plan{display:grid!important;grid-template-columns:1fr!important;gap:4px;background:rgba(255,255,255,.95);color:var(--ink);border-radius:10px;padding:8px 10px;margin:6px 0}
+.mirror .plan .ph{font:700 13px Cambria,serif;color:var(--indigo-deep)}
+.mirror .plan small{display:block;color:#686884;font-size:11px}
+.qlist{display:grid;gap:6px;margin-top:10px}
+.qlist .qc{background:rgba(255,255,255,.1);border-radius:10px;padding:8px 10px;font-size:13px}
+.react{display:flex;gap:8px;padding:8px 14px;flex-wrap:wrap}
+.react button{border:0;background:rgba(255,255,255,.12);border-radius:12px;padding:8px 10px;font-size:20px}
+.cbar{display:flex;gap:8px;padding:6px 14px 14px}
+.cbar input{flex:1;font:inherit;font-size:16px;padding:12px 14px;border-radius:14px;border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.1);color:#fff}
+.cbar input::placeholder{color:#cfcaff}
+.cbar button{border:0;background:var(--amber);color:#2b2370;border-radius:14px;padding:0 16px;font-weight:700}
 </style>
 </head>
 <body>
 <header><span>Crowd Party</span><span id="count"></span></header>
+<div class="lbstrip" id="lbstrip"></div>
 <main id="m"><div class="big">Joining...</div><div class="sub">Keep this page open.</div></main>
+<div id="postOnboard" style="display:none">
+  <div class="react" id="reactRow"></div>
+  <div class="cbar"><input id="cmInput" maxlength="140" placeholder="Say something…"><button id="cmBtn">Send</button></div>
+</div>
 <script src="config.js"></script>
 <script>
 (function(){
@@ -43,11 +109,51 @@ function url(p){return DB+"/rooms/"+ROOM+(p?"/"+p:"")+".json"}
 if(!DB||!ROOM){m.innerHTML="<div class='big'>Scan the QR code again.</div><div class='sub'>This page needs the room code from the screen at the front.</div>";return}
 var last="",localOpen={},myVote={};
 function put(p,v){return fetch(url(p),{method:"PUT",body:JSON.stringify(v)})}
+function post(p,v){return fetch(url(p),{method:"POST",body:JSON.stringify(v)})}
 function beat(){put("seen/"+id,{".sv":"timestamp"}).catch(function(){})}
-function render(st){
-  st=st||{status:"idle"};
-  var sig=JSON.stringify([st.status,st.id,st.t,myVote[st.id],st.counts]);
-  if(!st.id||st.status==="idle"){var h="<div class='big'>You're in, "+esc(name||"")+".</div><div class='sub'>Waiting for the next question. Keep this page open.</div>";if(m.innerHTML!==h)m.innerHTML=h;last="";return}
+var ICONS=["🧙","🐉","👸","🦇","📱","🥷","🤖","🦄","🧑‍🚀","🦁"];
+function renderLeaderboard(room){
+  var strip=document.getElementById("lbstrip");if(!strip)return;
+  var scores=room.scores||{},names=room.names||{},icons=room.icons||{};
+  var ids=Object.keys(names);
+  if(!ids.length){strip.innerHTML="";return}
+  ids.sort(function(a,b){return (scores[b]||0)-(scores[a]||0)});
+  strip.innerHTML=ids.map(function(i){return "<div class='lbchip"+(i===id?" me":"")+"'><span class='ic'>"+esc(icons[i]||"🙂")+"</span><span class='nm'>"+esc((names[i]||"").split(" ")[0])+"</span><span class='sc'>"+(scores[i]||0)+"</span></div>"}).join("")
+}
+function renderReactRow(){
+  var row=document.getElementById("reactRow");if(!row||row.children.length)return;
+  ["👍","❤️","😮","🤔","👏"].forEach(function(e){var b=document.createElement("button");b.textContent=e;b.onclick=function(){post("reactions",{id:id,emoji:e,t:Date.now()}).catch(function(){})};row.appendChild(b)})
+}
+document.getElementById("cmBtn").onclick=function(){
+  var inp=document.getElementById("cmInput"),v=(inp.value||"").trim().slice(0,140);if(!v)return;
+  post("comments",{id:id,name:name,text:v,t:Date.now()}).catch(function(){});inp.value=""
+};
+document.getElementById("cmInput").addEventListener("keydown",function(e){if(e.key==="Enter")document.getElementById("cmBtn").click()});
+function render(room){
+  var st=room.state||{status:"idle"};
+  renderLeaderboard(room);renderReactRow();
+  var sig=JSON.stringify([st.status,st.id,st.t,myVote[st.id],st.counts,room.slide&&room.slide.t,room.slide&&room.slide.at]);
+  if(!st.id||st.status==="idle"){
+    if(sig===last)return;last=sig;
+    var sl=room.slide;
+    if(sl&&sl.t==="Ask the kids"){
+      var myQs=(room.questions&&Object.keys(room.questions).map(function(k){return room.questions[k]}).filter(function(q){return q&&q.id===id}))||[];
+      var h="<div class='mirror'><div class='kicker'>Audience moment</div><h2>What would we ask the kids?</h2><div class='sub'>If we sat down with the 17- and 14-year-olds alone, what would you ask them? 5 points per question.</div>";
+      h+="<div class='qform'><input id='qInput' maxlength='140' placeholder='Type your question'><button id='qBtn'>Submit question (+5)</button></div>";
+      h+="<div class='qlist'>"+myQs.map(function(q){return "<div class='qc'>You asked: "+esc(q.text)+"</div>"}).join("")+"</div></div>";
+      m.innerHTML=h;
+      var qi=document.getElementById("qInput"),qb=document.getElementById("qBtn");
+      qb.onclick=function(){var v=(qi.value||"").trim().slice(0,140);if(!v)return;post("questions",{id:id,name:name,text:v,t:Date.now()}).catch(function(){});qi.value="";last=""};
+      qi.addEventListener("keydown",function(e){if(e.key==="Enter")qb.click()});
+    }else if(sl&&sl.html){
+      var safeHtml=sl.html.replace(/\s+contenteditable(="[^"]*")?/gi,"");
+      m.innerHTML="<div class='mirror'>"+safeHtml+"</div>";
+      [].forEach.call(m.querySelectorAll("[data-toggle]"),function(c){c.addEventListener("click",function(){c.classList.toggle("open")})});
+    }else{
+      m.innerHTML="<div class='big'>You're in, "+esc(name||"")+".</div><div class='sub'>Waiting for the next question. Keep this page open.</div>";
+    }
+    return;
+  }
   if(st.status==="open"&&!localOpen[st.t])localOpen[st.t]=Date.now();
   if(sig===last){var tm=document.getElementById("tm");if(tm&&st.status==="open"){var l=Math.max(0,(st.secs||45)-Math.round((Date.now()-localOpen[st.t])/1000));tm.textContent=l+"s"}return}
   last=sig;
@@ -63,20 +169,37 @@ function render(st){
   else msg=((mv==null)?"You didn't vote this round.":"You voted "+L[mv]+".")+" Look up at the screen.";
   h2+="<div class='sub'>"+msg+"</div>";
   m.innerHTML=h2;
-  [].forEach.call(m.querySelectorAll("button.opt"),function(b){b.onclick=function(){var i=+b.getAttribute("data-i");myVote[st.id]=i;put("votes/"+st.id+"/"+id,i).catch(function(){});last="";render(st)}});
+  [].forEach.call(m.querySelectorAll("button.opt"),function(b){b.onclick=function(){var i=+b.getAttribute("data-i");myVote[st.id]=i;put("votes/"+st.id+"/"+id,i).catch(function(){});last="";render(room)}});
 }
-function poll(){fetch(url("state")).then(function(r){return r.json()}).then(function(st){cnt.textContent="";render(st)}).catch(function(){cnt.textContent="reconnecting"})}
-var name=store("cp_name");
-function startApp(){poll();beat();setInterval(poll,1200);setInterval(beat,5000)}
-if(name){put("names/"+id,name).catch(function(){});startApp()}
-else{
+function poll(){fetch(url("")).then(function(r){return r.json()}).then(function(room){cnt.textContent="";render(room||{})}).catch(function(){cnt.textContent="reconnecting"})}
+var name=store("cp_name"),mood=store("cp_mood"),icon=store("cp_icon");
+function startApp(){var po=document.getElementById("postOnboard");if(po)po.style.display="";poll();beat();setInterval(poll,1200);setInterval(beat,5000)}
+function askIcon(){
+  m.innerHTML="<div class='big'>Pick your icon</div><div class='sub'>This shows on the leaderboard.</div><div class='iconrow' id='iconRow'></div>";
+  var row=document.getElementById("iconRow");
+  ICONS.forEach(function(e){var b=document.createElement("button");b.textContent=e;b.onclick=function(){icon=e;store("cp_icon",e);put("icons/"+id,e).catch(function(){});startApp()};row.appendChild(b)})
+}
+function askMood(){
+  m.innerHTML="<div class='big'>How are you feeling?</div><div class='sub'>Type a word, or tap an emoji.</div><div class='namewrap'><input id='moodInput' maxlength='24' placeholder='One word'><button id='moodBtn'>Next</button></div><div class='moodrow' id='moodRow'></div>";
+  var inp=document.getElementById("moodInput"),btn=document.getElementById("moodBtn"),row=document.getElementById("moodRow");
+  function submitMood(v){v=(v||"").trim().slice(0,24);if(!v)return;mood=v;store("cp_mood",v);put("moods/"+id,v).catch(function(){});askIcon()}
+  btn.onclick=function(){submitMood(inp.value)};
+  inp.addEventListener("keydown",function(e){if(e.key==="Enter")submitMood(inp.value)});
+  ["😊","😬","🤔","😴","🔥","😐"].forEach(function(e){var b=document.createElement("button");b.textContent=e;b.onclick=function(){submitMood(e)};row.appendChild(b)});
+  setTimeout(function(){inp.focus()},50);
+}
+function askName(){
   m.innerHTML="<div class='big'>What's your name?</div><div class='sub'>Your presenter will see it next to your answers.</div><div class='namewrap'><input id='nameInput' maxlength='40' placeholder='First name'><button id='nameBtn'>Join</button></div>";
   var inp=document.getElementById("nameInput"),btn=document.getElementById("nameBtn");
-  function submitName(){var v=(inp.value||"").trim().slice(0,40);if(!v)return;name=v;store("cp_name",v);put("names/"+id,v).catch(function(){});startApp()}
+  function submitName(){var v=(inp.value||"").trim().slice(0,40);if(!v)return;name=v;store("cp_name",v);put("names/"+id,v).catch(function(){});askMood()}
   btn.onclick=submitName;
   inp.addEventListener("keydown",function(e){if(e.key==="Enter")submitName()});
   setTimeout(function(){inp.focus()},50);
 }
+if(!name){askName()}
+else if(!mood){askMood()}
+else if(!icon){askIcon()}
+else{put("names/"+id,name).catch(function(){});startApp()}
 })();
 </script>
 </body>
