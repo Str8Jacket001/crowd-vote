@@ -112,6 +112,10 @@ function put(p,v){return fetch(url(p),{method:"PUT",body:JSON.stringify(v)})}
 function post(p,v){return fetch(url(p),{method:"POST",body:JSON.stringify(v)})}
 function beat(){put("seen/"+id,{".sv":"timestamp"}).catch(function(){})}
 var ICONS=["🧙","🐉","👸","🦇","📱","🥷","🤖","🦄","🧑‍🚀","🦁"];
+var OPEN_SLIDES={
+  "Ask the kids":{path:"questions",placeholder:"Type your question",btn:"Submit question (+5)"},
+  "Newborn options":{path:"ideas",placeholder:"Type your idea",btn:"Submit idea"}
+};
 function renderLeaderboard(room){
   var strip=document.getElementById("lbstrip");if(!strip)return;
   var scores=room.scores||{},names=room.names||{},icons=room.icons||{};
@@ -135,15 +139,14 @@ function render(room){
   var sig=JSON.stringify([st.status,st.id,st.t,myVote[st.id],st.counts,room.slide&&room.slide.t,room.slide&&room.slide.at]);
   if(!st.id||st.status==="idle"){
     if(sig===last)return;last=sig;
-    var sl=room.slide;
-    if(sl&&sl.t==="Ask the kids"){
-      var myQs=(room.questions&&Object.keys(room.questions).map(function(k){return room.questions[k]}).filter(function(q){return q&&q.id===id}))||[];
-      var h="<div class='mirror'><div class='kicker'>Audience moment</div><h2>What would we ask the kids?</h2><div class='sub'>If we sat down with the 17- and 14-year-olds alone, what would you ask them? 5 points per question.</div>";
-      h+="<div class='qform'><input id='qInput' maxlength='140' placeholder='Type your question'><button id='qBtn'>Submit question (+5)</button></div>";
-      h+="<div class='qlist'>"+myQs.map(function(q){return "<div class='qc'>You asked: "+esc(q.text)+"</div>"}).join("")+"</div></div>";
+    var sl=room.slide,oc=sl&&OPEN_SLIDES[sl.t];
+    if(oc&&sl.html){
+      var safeHtml0=sl.html.replace(/\s+contenteditable(="[^"]*")?/gi,"");
+      var mySub=(room[oc.path]&&Object.keys(room[oc.path]).map(function(k){return room[oc.path][k]}).filter(function(x){return x&&x.id===id}))||[];
+      var h="<div class='mirror'>"+safeHtml0+"<div class='qform'><input id='qInput' maxlength='140' placeholder='"+esc(oc.placeholder)+"'><button id='qBtn'>"+esc(oc.btn)+"</button></div><div class='qlist'>"+mySub.map(function(x){return "<div class='qc'>You said: "+esc(x.text)+"</div>"}).join("")+"</div></div>";
       m.innerHTML=h;
       var qi=document.getElementById("qInput"),qb=document.getElementById("qBtn");
-      qb.onclick=function(){var v=(qi.value||"").trim().slice(0,140);if(!v)return;post("questions",{id:id,name:name,text:v,t:Date.now()}).catch(function(){});qi.value="";last=""};
+      qb.onclick=function(){var v=(qi.value||"").trim().slice(0,140);if(!v)return;post(oc.path,{id:id,name:name,text:v,t:Date.now()}).catch(function(){});qi.value="";last=""};
       qi.addEventListener("keydown",function(e){if(e.key==="Enter")qb.click()});
     }else if(sl&&sl.html){
       var safeHtml=sl.html.replace(/\s+contenteditable(="[^"]*")?/gi,"");
